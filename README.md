@@ -1,5 +1,7 @@
 # Classificação por Contexto
 
+*Exemplo de delimitação de áreas com florestas a partir de imagens do Sentinel L2A*
+
 ![Exemplo de delimitação de áreas com florestas a partir de imagens do Sentinel L2A](exemplo.gif)
 
 Pipeline de aprendizado profundo para classificação de pixels de imagens de satélite usando UNet++. A partir de pontos de amostra criados em qualquer software GIS, o pipeline treina um modelo que classifica cada pixel de um raster `.tif` e gera um shapefile com os polígonos de cada classe detectada.
