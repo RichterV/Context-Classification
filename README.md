@@ -1,6 +1,6 @@
 # Classificação por Contexto
 
-*Exemplo de delimitação de áreas com florestas a partir de imagens do Sentinel L2A*
+*Exemplo de delimitação de áreas com florestas plantadas a partir de imagens do Sentinel L2A*
 
 ![Exemplo de delimitação de áreas com florestas a partir de imagens do Sentinel L2A](exemplo.gif)
 
