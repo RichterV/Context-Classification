@@ -1,0 +1,33 @@
+# Dados gerados pelo pipeline
+context_data/
+context_models/
+logs/
+predictions_talhoes/
+pos_processados/
+produto_final/
+
+# Rasters e shapefiles de entrada
+raster/
+shapefiles/
+
+# Vídeo original (use exemplo.gif no lugar)
+video.mp4
+
+# Projeto QGIS
+*.qgz
+
+# Ambiente virtual
+venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Arquivos temporários
+*.tmp
+talhoes_teste.txt
+
+#outros
+*.bat
+CLAUDE.md

@@ -1,0 +1,59 @@
+#O melhor foi 64 piorando aos 72
+#(o melhor valor esta entre 40 e 64)
+#testar 48,56 e 64
+#testei: 48,56 e 64, o contexto 56 se saiu melhor
+#testando [8,16,24,32,40]  40 se saiu melhor. Testar 40,48,56 dnv
+contextos: [80,88,96,104,112,120,128]  # tamanhos de janela (pixels) testados no treino e predição
+imagens: ['raster/nome_imagem'] # chaves de imagem usadas (devem bater com raster_paths no predict)
+points_dir:
+  floresta: shapefiles/floresta.shp         # shapefile de pontos de amostras positivas (floresta)
+  nao_floresta: shapefiles/nao_floresta.shp # shapefile de pontos de amostras negativas (não floresta)
+
+# Paths
+output_dir: context_data   # pasta onde os patches de contexto extraídos são salvos
+model_dir: context_models  # pasta onde os modelos treinados (.keras) são salvos
+log_dir: logs              # pasta onde os logs do TensorBoard são salvos
+
+# Random seed
+random_seed: 153           # semente para reprodutibilidade (amostragem, shuffle, etc.)
+
+# Treinamento
+training:
+  patience: 100            # épocas sem melhora na validação antes de parar (early stopping)
+  epochs: 5000             # número máximo de épocas
+  batch_size: 32           # amostras por passo de gradiente
+  test_size: 0.30          # fração dos dados reservada para validação (0.30 = 30%)
+  learning_rate: 0.001     # taxa de aprendizado inicial do otimizador
+  reduce_lr:
+    patience: 25           # épocas sem melhora antes de reduzir o learning rate
+    factor: 0.5            # fator de redução do learning rate (novo_lr = lr * factor)
+    min_lr: 0.000001       # valor mínimo que o learning rate pode atingir
+  augment:
+    rotation_range: 90     # rotação aleatória máxima em graus
+    zoom_range: 0.2        # fração de zoom aleatório (±20%)
+    horizontal_flip: true  # espelhamento horizontal aleatório
+    vertical_flip: true    # espelhamento vertical aleatório
+
+# PARAMETROS DE PREDICT
+predict:
+  batch_size: 256          # patches processados por vez pelo modelo (afeta uso de memória GPU)
+  crs: "EPSG:31982"        # CRS de saída do shapefile final
+  teste: false             # true = processa apenas 2 talhões aleatórios para verificação rápida
+  buffer_dist: 3           # expansão em pixels aplicada em cada talhão antes de gerar a máscara de predição
+  shapefile_limit: "shapefiles/limite_fazenda.shp" # shapefile com os talhões a serem preditos
+  output_dir: "predictions_talhoes"                # pasta de saída dos shapefiles de predição
+  model_name: "nome_imagem"                    # nome do modelo (deve bater com model_dir)
+  raster_paths:
+    predict_raster: "raster/nome_imagem.tif"  # raster de entrada para predição
+
+# POS-PROCESSAMENTO
+pos_processamento:
+  input_shapefile: "predictions_talhoes/class_1_predict_raster_ctx64.shp" # shapefile a ser pós-processado
+  output_dir: "pos_processados"      # pasta onde o shapefile corrigido será salvo
+  filtrar_poligonos: true            # remove polígonos com área menor que min_area_poligonos
+  filtrar_aneis: true                # remove buracos internos com área menor que min_area_aneis
+  simplificar_geometria: true        # suaviza bordas removendo vértices redundantes
+  validar_geometria: true            # corrige geometrias inválidas (auto-intersecções, etc.)
+  min_area_poligonos: 30             # área mínima em m² para manter um polígono
+  min_area_aneis: 15                 # área mínima em m² para manter um buraco interno
+  tolerancia_simplify: 1          # distância máxima em metros que um vértice pode ser deslocado ao simplificar
