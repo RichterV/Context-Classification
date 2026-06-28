@@ -5,7 +5,7 @@ import geopandas as gpd
 from shapely.geometry import box
 import random
 
-def mostrar_porção_aleatória_tif(caminho_arquivo, caminho_shp, n, qtd=10, max_tentativas=2000):
+def mostrar_porcao_aleatoria_tif(caminho_arquivo, caminho_shp, n, qtd=10, max_tentativas=2000):
     with rasterio.open(caminho_arquivo) as src:
         imagem = src.read([3, 2, 1])
         transform = src.transform
@@ -52,4 +52,4 @@ def mostrar_porção_aleatória_tif(caminho_arquivo, caminho_shp, n, qtd=10, max
 caminho_arquivo = "raster/nome_imagem.tif"
 caminho_shp = "shapefiles/limite_fazenda.shp"
 n = 40
-mostrar_porção_aleatória_tif(caminho_arquivo, caminho_shp, n)
+mostrar_porcao_aleatoria_tif(caminho_arquivo, caminho_shp, n)
