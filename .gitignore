@@ -11,7 +11,7 @@ raster/
 shapefiles/
 
 # Vídeo original (use exemplo.gif no lugar)
-video.mp4
+*.mp4
 
 # Projeto QGIS
 *.qgz
