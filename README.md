@@ -10,20 +10,26 @@ Pipeline de aprendizado profundo para classificação de pixels de imagens de sa
 
 O modelo recebe uma janela (`contexto × contexto` pixels) centrada em cada pixel e decide sua classe. Usar uma janela ao invés do pixel isolado permite que o modelo capture padrões de textura, forma e vizinhança, o que aumenta significativamente a precisão.
 
-**Entrada:** imagem Sentinel-2 L2A (7 bandas) + pontos de amostra por classe em shapefiles + shapefile com os limites da área a classificar.
+**Entrada:** raster de qualquer sensor (satélite, drone, etc.) + pontos de amostra por classe em shapefiles + shapefile com os limites da área a classificar.
 
 **Saída:** shapefile vetorial com os polígonos de cada classe dentro dos limites informados.
 
-**Canais de entrada por pixel (12 no total):**
+**Canais de entrada por pixel:** as bandas brutas são as que o usuário informar em `bandas` no `config.yml` (nome lógico → número da banda no raster), normalizadas para 0–1. A partir dessas bandas, o pipeline calcula automaticamente todo índice espectral cujas bandas dependentes estejam disponíveis — nenhum código precisa ser alterado ao trocar de sensor, só o `config.yml`. O número final de canais (bandas + índices calculáveis) é detectado dinamicamente pelo treino.
 
-| # | Canal | Descrição |
-|---|-------|-----------|
-| 1–7 | Bandas espectrais | Blue, Green, Red, RedEdge, NIR, SWIR1, SWIR2 (normalizadas 0–1) |
-| 8 | EVI | Enhanced Vegetation Index |
-| 9 | SAVI | Soil-Adjusted Vegetation Index |
-| 10 | NBR1 | Normalized Burn Ratio (NIR/SWIR1) |
-| 11 | NBR2 | Normalized Burn Ratio (NIR/SWIR2) |
-| 12 | NDRE | Normalized Difference Red Edge |
+Índices reconhecidos (implementados em `bands_indices.py`):
+
+| Índice | Bandas exigidas | Descrição |
+|--------|------------------|-----------|
+| NDVI | NIR, Red | Normalized Difference Vegetation Index |
+| SAVI | NIR, Red | Soil-Adjusted Vegetation Index |
+| EVI | NIR, Red, Blue | Enhanced Vegetation Index |
+| NBR1 | NIR, SWIR1 | Normalized Burn Ratio (NIR/SWIR1) |
+| NBR2 | NIR, SWIR2 | Normalized Burn Ratio (NIR/SWIR2) |
+| NDRE | NIR, RedEdge | Normalized Difference Red Edge |
+| MPRI | Green, Red | Modified Photochemical Reflectance Index (funciona em drones RGB, sem NIR) |
+| GNDVI | NIR, Green | Green Normalized Difference Vegetation Index |
+
+Um índice só é calculado se **todas** as bandas que ele exige estiverem presentes em `bandas`. Se faltar, por exemplo, SWIR1/SWIR2 (comum em imagens de drone), NBR1/NBR2 são simplesmente omitidos e o pipeline segue apenas com as bandas brutas + índices ainda calculáveis.
 
 ---
 
@@ -32,6 +38,7 @@ O modelo recebe uma janela (`contexto × contexto` pixels) centrada em cada pixe
 ```
 context_classification/
 ├── config.yml                              # Configurações centralizadas de todo o pipeline
+├── bands_indices.py                        # Registro de bandas/índices espectrais (usado pela extração e predição)
 ├── 1_extract_train_data_from_points.py     # Extrai patches de treino dos pontos amostrais
 ├── 2_train.py                              # Treina o modelo UNet++ por contexto
 ├── 3_predict.py                            # Prediz sobre o raster e gera shapefile
@@ -80,6 +87,17 @@ points_dir:
   classe_a: shapefiles/classe_a.shp   # shapefile de pontos positivos
   classe_b: shapefiles/classe_b.shp   # shapefile de pontos negativos
 
+bandas:                    # nome lógico -> número da banda no raster (1-based)
+  blue: 1                  # remova a linha de uma banda que não existir na sua imagem
+  green: 2
+  red: 3
+  rededge: 4
+  nir: 5
+  swir1: 6
+  swir2: 7
+
+escala_reflectancia: 10000 # opcional; padrão 10000 (Sentinel-2). Use 1 se a imagem já vier em 0-1
+
 training:
   epochs: 5000
   batch_size: 32
@@ -123,10 +141,10 @@ Configure os caminhos no `config.yml` em `points_dir`.
 python 1_extract_train_data_from_points.py
 ```
 
-Para cada ponto amostral e para cada tamanho de contexto configurado em `contextos`, extrai uma janela `contexto × contexto` pixels centrada no ponto, calcula os 5 índices espectrais e salva os arrays em `context_data/`.
+Para cada ponto amostral e para cada tamanho de contexto configurado em `contextos`, extrai uma janela `contexto × contexto` pixels centrada no ponto, lê as bandas definidas em `bandas`, calcula os índices espectrais compatíveis com essas bandas (ver tabela acima) e salva os arrays em `context_data/`.
 
 Arquivos gerados:
-- `context_data/X_context_rgb_{contexto}_{imagem}.npy` — patches de entrada (N, ctx, ctx, 12)
+- `context_data/X_context_rgb_{contexto}_{imagem}.npy` — patches de entrada (N, ctx, ctx, n_canais), onde `n_canais` = nº de bandas informadas + nº de índices calculáveis
 - `context_data/Y_labels_{contexto}_{imagem}.npy` — rótulos one-hot (N, 2)
 
 ### 3. Treinar o modelo
@@ -135,7 +153,7 @@ Arquivos gerados:
 python 2_train.py
 ```
 
-Treina uma UNet++ para cada combinação de `(contexto, imagem)` configurada. O modelo recebe um patch `contexto × contexto × 12` e classifica o pixel central.
+Treina uma UNet++ para cada combinação de `(contexto, imagem)` configurada. O modelo recebe um patch `contexto × contexto × n_canais` (número de canais inferido automaticamente do `.npy` gerado na extração) e classifica o pixel central.
 
 **Arquitetura:**
 - Encoder: 3 blocos Conv2D → MaxPooling com 32/64/128/256 filtros
@@ -218,3 +236,12 @@ Experimentos com imagens Sentinel-2 upscaladas para 1m×1m (via S2DR3) mostraram
 | 80       | 0.9493   | 0.9493 |
 
 A acurácia cresce monotonicamente de 8 até 64 e começa a degradar a partir de 72, indicando que janelas muito grandes introduzem contexto irrelevante. Para outros sensores ou resoluções, recomenda-se testar a faixa 32–96.
+
+---
+
+## Citação
+
+O uso deste repositório, no todo ou em parte, requer citação obrigatória do autor e da fonte:
+
+**Autor:** Vinicius Richter
+**Repositório:** https://github.com/RichterV/Context-Classification

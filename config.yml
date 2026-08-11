@@ -9,6 +9,34 @@ points_dir:
   floresta: shapefiles/floresta.shp         # shapefile de pontos de amostras positivas (floresta)
   nao_floresta: shapefiles/nao_floresta.shp # shapefile de pontos de amostras negativas (não floresta)
 
+# Bandas disponíveis no raster de entrada.
+# Mapeia o nome lógico da banda (usado para calcular os índices) para o número
+# da banda no arquivo raster (1-based, ordem de leitura do rasterio).
+# Informe apenas as bandas que existem na sua imagem (satélite, drone, etc.) —
+# bandas ausentes desativam automaticamente os índices que dependem delas e o
+# pipeline passa a usar apenas as bandas brutas informadas.
+# Nomes reconhecidos para cálculo de índices: blue, green, red, rededge, nir, swir1, swir2
+#
+# Não tem uma banda (ex.: sem swir1/swir2 num drone)? APAGUE a linha inteira —
+# não deixe "swir1: null", "swir1: ~" nem "swir1: 0". Uma chave presente (mesmo
+# com valor nulo) é tratada como banda disponível e quebra a leitura do raster;
+# só a ausência da chave desativa corretamente os índices que dependem dela.
+bandas:
+  blue: 1
+  green: 2
+  red: 3
+  rededge: 4
+  nir: 5
+  swir1: 6
+  swir2: 7
+
+# Fator de escala para normalizar a reflectância das bandas para 0-1
+# (Sentinel-2 L2A = 10000; ajuste conforme a escala da sua fonte de imagem).
+# Campo opcional: se você remover esta linha, o pipeline assume 10000.
+# Se sua imagem já vier em reflectância 0-1 (comum em alguns sensores de drone),
+# defina escala_reflectancia: 1
+escala_reflectancia: 10000
+
 # Paths
 output_dir: context_data   # pasta onde os patches de contexto extraídos são salvos
 model_dir: context_models  # pasta onde os modelos treinados (.keras) são salvos

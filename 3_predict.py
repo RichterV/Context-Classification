@@ -44,6 +44,8 @@ from shapely.geometry import shape
 from shapely.ops import unary_union
 import yaml
 
+from bands_indices import carregar_canais
+
 # Carrega o arquivo de configuração
 with open("config.yml", "r") as f:
     config = yaml.safe_load(f)
@@ -54,6 +56,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 # Configurações gerais
 contextos  = config["contextos"]
 model_dir  = config["model_dir"]
+bandas_config = config["bandas"]
+escala_reflectancia = config.get("escala_reflectancia", 10000.0)
 
 # Configurações de predict
 predict_cfg     = config["predict"]
@@ -76,36 +80,12 @@ if teste:
 
 
 def load_image_data(img_type):
+    arr, nomes_canais = carregar_canais(raster_paths[img_type], bandas_config, escala_reflectancia)
+    print(f"Canais utilizados ({len(nomes_canais)}): {', '.join(nomes_canais)}")
+
     with rasterio.open(raster_paths[img_type]) as src:
-        arr = src.read([1, 2, 3, 4, 5, 6, 7])  # Blue, Green, Red, RedEdge, NIR, SWIR1, SWIR2
         transform = src.transform
         crs = src.crs
-
-    arr = np.moveaxis(arr, 0, -1)
-    arr_norm = arr.astype(np.float32) / 10000.0
-
-    blue    = arr_norm[:, :, 0]
-    green   = arr_norm[:, :, 1]
-    red     = arr_norm[:, :, 2]
-    rededge = arr_norm[:, :, 3]
-    nir     = arr_norm[:, :, 4]
-    swir1   = arr_norm[:, :, 5]
-    swir2   = arr_norm[:, :, 6]
-
-    evi  = 2.5 * (nir - red) / (nir + 6*red - 7.5*blue + 1 + 1e-5)
-    savi = 1.5 * (nir - red) / (nir + red + 0.5 + 1e-5)
-    nbr1 = (nir - swir1) / (nir + swir1 + 1e-5)
-    nbr2 = (nir - swir2) / (nir + swir2 + 1e-5)
-    ndre = (nir - rededge) / (nir + rededge + 1e-5)
-
-    evi  = np.expand_dims(evi,  axis=-1)
-    savi = np.expand_dims(savi, axis=-1)
-    nbr1 = np.expand_dims(nbr1, axis=-1)
-    nbr2 = np.expand_dims(nbr2, axis=-1)
-    ndre = np.expand_dims(ndre, axis=-1)
-
-    # 7 bandas (norm.) + EVI, SAVI, NBR1, NBR2, NDRE = 12 canais
-    arr = np.concatenate((arr_norm, evi, savi, nbr1, nbr2, ndre), axis=-1)
 
     return arr, transform, crs
 
