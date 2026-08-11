@@ -241,7 +241,27 @@ A acurácia cresce monotonicamente de 8 até 64 e começa a degradar a partir de
 
 ## Citação
 
-O uso deste repositório, no todo ou em parte, requer citação obrigatória do autor e da fonte:
+O uso deste repositório, no todo ou em parte, requer citação obrigatória do autor e da fonte. Use o formato mais adequado ao seu caso — cada bloco abaixo pode ser copiado pelo ícone no canto superior direito.
 
-**Autor:** Vinicius Richter
-**Repositório:** https://github.com/RichterV/Context-Classification
+**Texto simples:**
+
+```
+Richter, Vinicius. Context Classification. 2026. Disponível em: https://github.com/RichterV/Context-Classification
+```
+
+**APA:**
+
+```
+Richter, V. (2026). Context Classification [Software]. GitHub. https://github.com/RichterV/Context-Classification
+```
+
+**BibTeX:**
+
+```bibtex
+@software{richter2026contextclassification,
+  author = {Richter, Vinicius},
+  title  = {Context Classification},
+  year   = {2026},
+  url    = {https://github.com/RichterV/Context-Classification}
+}
+```
